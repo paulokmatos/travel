@@ -163,6 +163,10 @@ class TravelOrderApiTest extends TestCase
             ->assertJsonPath('data.destination', 'Porto')
             ->assertJsonPath('data.departure_date', '2026-08-01');
 
+        $this->patchJson("/api/v1/travel-orders/{$requestedTravelOrder->id}", [
+            'departure_date' => '2026-08-09',
+        ], $this->authorizationHeader($user))->assertInvalid(['departure_date']);
+
         $this->patchJson("/api/v1/travel-orders/{$approvedTravelOrder->id}", [
             'destination' => 'Madrid',
         ], $this->authorizationHeader($user))->assertForbidden();
@@ -221,6 +225,28 @@ class TravelOrderApiTest extends TestCase
         $this->patchJson("/api/v1/travel-orders/{$canceledTravelOrder->id}/status", [
             'status' => TravelOrderStatus::Aprovado->value,
         ], $this->authorizationHeader($admin))->assertStatus(409);
+    }
+
+    public function test_list_cache_is_invalidated_after_travel_order_update(): void
+    {
+        $user = User::factory()->create();
+        $travelOrder = TravelOrder::factory()->for($user)->create([
+            'destination' => 'Lisbon',
+            'departure_date' => '2026-07-10',
+            'return_date' => '2026-07-20',
+        ]);
+
+        $this->getJson('/api/v1/travel-orders', $this->authorizationHeader($user))
+            ->assertOk()
+            ->assertJsonPath('data.0.destination', 'Lisbon');
+
+        $this->patchJson("/api/v1/travel-orders/{$travelOrder->id}", [
+            'destination' => 'Porto',
+        ], $this->authorizationHeader($user))->assertOk();
+
+        $this->getJson('/api/v1/travel-orders', $this->authorizationHeader($user))
+            ->assertOk()
+            ->assertJsonPath('data.0.destination', 'Porto');
     }
 
     /**
