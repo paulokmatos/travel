@@ -62,7 +62,7 @@ class TravelOrderCache
     private function incrementVersion(string $key): void
     {
         Cache::add($key, 1, self::VERSION_TTL_SECONDS);
-        Cache::increment($key);
+        Cache::memo()->increment($key);
     }
 
     private function globalVersionKey(): string
