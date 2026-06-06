@@ -3,9 +3,10 @@
 namespace App\Http\Requests\Api\V1;
 
 use App\Models\TravelOrder;
+use App\Rules\ValidTravelDateRange;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Validator;
+use Illuminate\Support\Str;
 
 class StoreTravelOrderRequest extends FormRequest
 {
@@ -17,6 +18,15 @@ class StoreTravelOrderRequest extends FormRequest
         return $this->user()?->can('create', TravelOrder::class) ?? false;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if (is_string($this->input('destination'))) {
+            $this->merge([
+                'destination' => Str::squish($this->input('destination')),
+            ]);
+        }
+    }
+
     /**
      * Get the validation rules that apply to the request.
      *
@@ -25,27 +35,9 @@ class StoreTravelOrderRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'destination' => ['required', 'string', 'max:255'],
-            'departure_date' => ['required', 'date_format:Y-m-d'],
-            'return_date' => ['required', 'date_format:Y-m-d'],
-        ];
-    }
-
-    /**
-     * @return array<int, callable(Validator): void>
-     */
-    public function after(): array
-    {
-        return [
-            function (Validator $validator): void {
-                if ($validator->errors()->isNotEmpty()) {
-                    return;
-                }
-
-                if ($this->input('return_date') < $this->input('departure_date')) {
-                    $validator->errors()->add('return_date', 'The return date must be after or equal to the departure date.');
-                }
-            },
+            'destination' => ['required', 'string', 'min:2', 'max:255'],
+            'departure_date' => ['required', 'date_format:Y-m-d', new ValidTravelDateRange],
+            'return_date' => ['required', 'date_format:Y-m-d', new ValidTravelDateRange],
         ];
     }
 }

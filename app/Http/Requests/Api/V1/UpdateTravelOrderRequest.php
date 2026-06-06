@@ -3,8 +3,10 @@
 namespace App\Http\Requests\Api\V1;
 
 use App\Models\TravelOrder;
+use App\Rules\ValidTravelDateRange;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Validator;
 
 class UpdateTravelOrderRequest extends FormRequest
@@ -20,6 +22,15 @@ class UpdateTravelOrderRequest extends FormRequest
             && ($this->user()?->can('update', $travelOrder) ?? false);
     }
 
+    protected function prepareForValidation(): void
+    {
+        if (is_string($this->input('destination'))) {
+            $this->merge([
+                'destination' => Str::squish($this->input('destination')),
+            ]);
+        }
+    }
+
     /**
      * Get the validation rules that apply to the request.
      *
@@ -27,10 +38,13 @@ class UpdateTravelOrderRequest extends FormRequest
      */
     public function rules(): array
     {
+        $travelOrder = $this->route('travel_order');
+        $travelOrder = $travelOrder instanceof TravelOrder ? $travelOrder : null;
+
         return [
-            'destination' => ['sometimes', 'required', 'string', 'max:255'],
-            'departure_date' => ['sometimes', 'required', 'date_format:Y-m-d'],
-            'return_date' => ['sometimes', 'required', 'date_format:Y-m-d'],
+            'destination' => ['sometimes', 'required', 'string', 'min:2', 'max:255'],
+            'departure_date' => ['sometimes', 'required', 'date_format:Y-m-d', new ValidTravelDateRange($travelOrder)],
+            'return_date' => ['sometimes', 'required', 'date_format:Y-m-d', new ValidTravelDateRange($travelOrder)],
         ];
     }
 
@@ -51,19 +65,6 @@ class UpdateTravelOrderRequest extends FormRequest
                     $validator->errors()->add('travel_order', 'At least one travel order field must be provided.');
 
                     return;
-                }
-
-                $travelOrder = $this->route('travel_order');
-
-                if (! $travelOrder instanceof TravelOrder) {
-                    return;
-                }
-
-                $departureDate = $this->input('departure_date', $travelOrder->departure_date->toDateString());
-                $returnDate = $this->input('return_date', $travelOrder->return_date->toDateString());
-
-                if ($returnDate < $departureDate) {
-                    $validator->errors()->add('return_date', 'The return date must be after or equal to the departure date.');
                 }
             },
         ];

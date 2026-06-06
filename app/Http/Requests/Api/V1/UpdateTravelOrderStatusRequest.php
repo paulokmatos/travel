@@ -29,10 +29,13 @@ class UpdateTravelOrderStatusRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'status' => ['required', 'string', Rule::in([
-                TravelOrderStatus::Aprovado->value,
-                TravelOrderStatus::Cancelado->value,
-            ])],
+            'status' => [
+                'required',
+                Rule::enum(TravelOrderStatus::class)->only([
+                    TravelOrderStatus::Aprovado,
+                    TravelOrderStatus::Cancelado,
+                ]),
+            ],
         ];
     }
 }

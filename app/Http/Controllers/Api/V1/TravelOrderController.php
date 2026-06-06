@@ -31,7 +31,7 @@ class TravelOrderController extends Controller
         $filters = $request->validated();
         $perPage = (int) ($filters['per_page'] ?? 15);
         $page = max(1, $request->integer('page', 1));
-        unset($filters['per_page']);
+        unset($filters['page'], $filters['per_page']);
 
         $payload = $travelOrderCache->rememberList(
             $request->user(),

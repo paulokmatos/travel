@@ -5,6 +5,7 @@ namespace App\Http\Requests\Api\V1;
 use App\Enums\TravelOrderStatus;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
@@ -18,6 +19,15 @@ class IndexTravelOrderRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if (is_string($this->input('destination'))) {
+            $this->merge([
+                'destination' => Str::squish($this->input('destination')),
+            ]);
+        }
+    }
+
     /**
      * Get the validation rules that apply to the request.
      *
@@ -26,13 +36,14 @@ class IndexTravelOrderRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'status' => ['sometimes', 'string', Rule::in(TravelOrderStatus::values())],
+            'status' => ['sometimes', Rule::enum(TravelOrderStatus::class)],
             'destination' => ['sometimes', 'string', 'max:255'],
             'created_from' => ['sometimes', 'date_format:Y-m-d'],
             'created_to' => ['sometimes', 'date_format:Y-m-d'],
             'travel_from' => ['sometimes', 'date_format:Y-m-d'],
             'travel_to' => ['sometimes', 'date_format:Y-m-d'],
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
+            'page' => ['sometimes', 'integer', 'min:1'],
         ];
     }
 
