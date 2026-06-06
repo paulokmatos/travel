@@ -19,12 +19,20 @@ services:
       QUEUE_CONNECTION: database
       SESSION_DRIVER: database
       MAIL_MAILER: log
+      APP_RUN_MIGRATIONS: "true"
+      APP_RUN_SEEDERS: "true"
       ADMIN_NAME: Admin User
       ADMIN_EMAIL: admin@example.com
       ADMIN_PASSWORD: password
     depends_on:
       mysql:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/up"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
 
   queue:
     build: .
@@ -47,9 +55,27 @@ services:
       MAIL_MAILER: log
     depends_on:
       app:
-        condition: service_started
+        condition: service_healthy
       mysql:
         condition: service_healthy
+
+  test:
+    build: .
+    command: php artisan test --compact
+    profiles:
+      - test
+    environment:
+      APP_ENV: testing
+      APP_DEBUG: "true"
+      APP_KEY: base64:pk9tN/BwN8c40ZZsN1VpgSBYabC+xP8iSC8xmhG/8E0=
+      JWT_SECRET: testing-jwt-secret-for-travel-orders
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ":memory:"
+      DB_URL: ""
+      CACHE_STORE: array
+      QUEUE_CONNECTION: sync
+      SESSION_DRIVER: array
+      MAIL_MAILER: array
 
   mysql:
     image: mysql:8.4
@@ -65,6 +91,11 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "8025:8025"
 
 volumes:
   mysql-data:
