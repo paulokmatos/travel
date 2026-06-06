@@ -73,6 +73,71 @@ class TravelOrderCacheTest extends TestCase
         $this->assertSame(2, $calls);
     }
 
+    public function test_filter_order_does_not_change_the_cache_key(): void
+    {
+        $cache = new TravelOrderCache;
+        $user = $this->user(id: 10);
+        $calls = 0;
+
+        $firstPayload = $cache->rememberList($user, [
+            'status' => 'aprovado',
+            'destination' => 'Paris',
+        ], 15, 1, function () use (&$calls): array {
+            $calls++;
+
+            return ['data' => [['id' => $calls]]];
+        });
+
+        $secondPayload = $cache->rememberList($user, [
+            'destination' => 'Paris',
+            'status' => 'aprovado',
+        ], 15, 1, function () use (&$calls): array {
+            $calls++;
+
+            return ['data' => [['id' => $calls]]];
+        });
+
+        $this->assertSame($firstPayload, $secondPayload);
+        $this->assertSame(1, $calls);
+    }
+
+    public function test_different_filters_pages_and_visibility_do_not_share_payloads(): void
+    {
+        $cache = new TravelOrderCache;
+        $user = $this->user(id: 1);
+        $adminWithSameId = $this->user(id: 1, isAdmin: true);
+        $calls = 0;
+
+        $payloads = [
+            $cache->rememberList($user, ['destination' => 'Paris'], 15, 1, $this->payloadCallback($calls)),
+            $cache->rememberList($user, ['destination' => 'Lisbon'], 15, 1, $this->payloadCallback($calls)),
+            $cache->rememberList($user, ['destination' => 'Paris'], 10, 1, $this->payloadCallback($calls)),
+            $cache->rememberList($user, ['destination' => 'Paris'], 15, 2, $this->payloadCallback($calls)),
+            $cache->rememberList($adminWithSameId, ['destination' => 'Paris'], 15, 1, $this->payloadCallback($calls)),
+        ];
+
+        $this->assertSame([
+            ['data' => [['id' => 1]]],
+            ['data' => [['id' => 2]]],
+            ['data' => [['id' => 3]]],
+            ['data' => [['id' => 4]]],
+            ['data' => [['id' => 5]]],
+        ], $payloads);
+        $this->assertSame(5, $calls);
+    }
+
+    /**
+     * @return callable(): array<string, mixed>
+     */
+    private function payloadCallback(int &$calls): callable
+    {
+        return function () use (&$calls): array {
+            $calls++;
+
+            return ['data' => [['id' => $calls]]];
+        };
+    }
+
     private function user(int $id, bool $isAdmin = false): User
     {
         $user = new User(['is_admin' => $isAdmin]);

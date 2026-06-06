@@ -1,0 +1,28 @@
+{
+    "$schema": "vendor/infection/infection/resources/schema.json",
+    "source": {
+        "directories": [
+            "app/Policies",
+            "app/Rules",
+            "app/Services",
+            "app/Support"
+        ]
+    },
+    "logs": {
+        "text": "storage/logs/infection.log",
+        "summary": "storage/logs/infection-summary.log"
+    },
+    "tmpDir": "storage/framework/infection",
+    "testFramework": "phpunit",
+    "phpUnit": {
+        "configDir": ".",
+        "customPath": "vendor/bin/phpunit"
+    },
+    "mutators": {
+        "@default": true,
+        "PublicVisibility": false,
+        "ProtectedVisibility": false
+    },
+    "minMsi": 0,
+    "minCoveredMsi": 0
+}

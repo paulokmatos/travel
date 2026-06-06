@@ -16,6 +16,7 @@
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
+        "infection/infection": "^0.33",
         "laravel/boost": "^2.2",
         "laravel/pail": "^1.2.5",
         "laravel/pao": "^1.0.6",
@@ -53,6 +54,11 @@
             "@php artisan config:clear --ansi @no_additional_args",
             "@php artisan test"
         ],
+        "test:feature": "@php artisan test --compact tests/Feature",
+        "test:mutation": "XDEBUG_MODE=coverage vendor/bin/infection --threads=max --min-msi=0 --min-covered-msi=0",
+        "test:mutation:ci": "XDEBUG_MODE=coverage vendor/bin/infection --threads=max --min-msi=70 --min-covered-msi=80",
+        "test:mutation:pcov": "php -d pcov.enabled=1 vendor/bin/infection --threads=max --min-msi=70 --min-covered-msi=80",
+        "test:unit": "@php artisan test --compact tests/Unit",
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
             "@php artisan package:discover --ansi"
@@ -84,7 +90,8 @@
         "sort-packages": true,
         "allow-plugins": {
             "pestphp/pest-plugin": true,
-            "php-http/discovery": true
+            "php-http/discovery": true,
+            "infection/extension-installer": true
         }
     },
     "minimum-stability": "stable",
