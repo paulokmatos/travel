@@ -7,9 +7,11 @@ Microsservico Laravel para gerenciar pedidos de viagem corporativa com API REST,
 - PHP 8.3
 - Laravel 13
 - MySQL 8.4
+- Redis 7 para cache e fila no Docker
 - PHPUnit 12
+- Infection para testes de mutacao
 - JWT: `php-open-source-saver/jwt-auth`
-- Docker Compose com `app`, `queue`, `mysql`, `mailpit` e profile de testes
+- Docker Compose com `app`, `queue`, `mysql`, `redis`, `mailpit` e profiles de testes/mutacao
 
 ## Regras De Negocio
 
@@ -45,6 +47,7 @@ Servicos:
 - `app`: roda Laravel em `http://localhost:8000`
 - `queue`: processa notificacoes enfileiradas
 - `mysql`: banco relacional da aplicacao
+- `redis`: cache e fila da aplicacao no ambiente Docker
 - `mailpit`: caixa de email local em `http://localhost:8025`
 
 O container `app` espera o MySQL, roda migrations e seeders automaticamente quando:
@@ -73,6 +76,12 @@ Para rodar os testes pelo Docker:
 
 ```bash
 docker compose run --rm test
+```
+
+Para rodar mutation testing pelo Docker:
+
+```bash
+docker compose --profile mutation run --rm mutation
 ```
 
 ## Executar Localmente
@@ -115,7 +124,9 @@ DB_DATABASE=travel
 DB_USERNAME=root
 DB_PASSWORD=
 
-QUEUE_CONNECTION=database
+CACHE_STORE=redis
+QUEUE_CONNECTION=redis
+REDIS_HOST=127.0.0.1
 MAIL_MAILER=log
 
 ADMIN_NAME="Admin User"
@@ -234,6 +245,7 @@ Filtros opcionais:
 | `travel_from` | `YYYY-MM-DD` | Data inicial da viagem |
 | `travel_to` | `YYYY-MM-DD` | Data final da viagem |
 | `per_page` | inteiro de 1 a 100 | Tamanho da pagina |
+| `page` | inteiro a partir de 1 | Numero da pagina |
 
 Exemplo:
 
@@ -344,6 +356,21 @@ Rodar apenas os testes da API:
 php artisan test --compact tests/Feature/TravelOrderApiTest.php
 ```
 
+Rodar testes unitarios:
+
+```bash
+composer test:unit
+```
+
+Rodar testes de mutacao com Infection:
+
+```bash
+composer test:mutation
+```
+
+O script local usa Xdebug em modo coverage. No Docker, o servico `mutation` usa PCOV.
+O quality gate configurado para CI/Docker exige MSI minimo de 70% e MSI coberto minimo de 80%.
+
 Formatar PHP com Pint:
 
 ```bash
@@ -364,12 +391,20 @@ Cobertura atual dos testes feature:
 - aprovacao/cancelamento por admin
 - notificacao de alteracao de status
 - bloqueio de transicoes em estados terminais
+- invalidacao de cache de listagem apos mutacoes
+
+Cobertura unit relevante:
+
+- transicoes de status
+- policy de dono/admin
+- regra de intervalo de datas
+- cache versionado de listagens
 
 ## Estrutura Principal
 
 ```text
 app/
-  Actions/UpdateTravelOrderStatus.php
+  Actions/
   Enums/TravelOrderStatus.php
   Http/Controllers/Api/V1/
   Http/Requests/Api/V1/
@@ -377,9 +412,14 @@ app/
   Models/TravelOrder.php
   Notifications/TravelOrderStatusChanged.php
   Policies/TravelOrderPolicy.php
+  Queries/TravelOrderQuery.php
+  Rules/ValidTravelDateRange.php
+  Services/TravelOrderCache.php
+  Support/TravelOrderStatusTransition.php
 routes/api.php
 database/migrations/
 tests/Feature/TravelOrderApiTest.php
+tests/Unit/
 ```
 
 ## Publicacao
