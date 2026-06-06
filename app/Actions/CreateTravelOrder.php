@@ -5,9 +5,12 @@ namespace App\Actions;
 use App\Enums\TravelOrderStatus;
 use App\Models\TravelOrder;
 use App\Models\User;
+use App\Services\TravelOrderCache;
 
 class CreateTravelOrder
 {
+    public function __construct(private readonly TravelOrderCache $travelOrderCache) {}
+
     /**
      * @param  array{destination: string, departure_date: string, return_date: string}  $data
      */
@@ -19,6 +22,8 @@ class CreateTravelOrder
             'status' => TravelOrderStatus::Solicitado,
         ]);
 
-        return $travelOrder->load('user');
+        $this->travelOrderCache->bustFor($user);
+
+        return $travelOrder->load('user:id,name,email');
     }
 }

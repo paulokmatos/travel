@@ -14,24 +14,40 @@ use App\Http\Requests\Api\V1\UpdateTravelOrderStatusRequest;
 use App\Http\Resources\TravelOrderResource;
 use App\Models\TravelOrder;
 use App\Queries\TravelOrderQuery;
+use App\Services\TravelOrderCache;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Gate;
 use Symfony\Component\HttpFoundation\Response;
 
 class TravelOrderController extends Controller
 {
-    public function index(IndexTravelOrderRequest $request, TravelOrderQuery $travelOrderQuery): AnonymousResourceCollection
-    {
+    public function index(
+        IndexTravelOrderRequest $request,
+        TravelOrderQuery $travelOrderQuery,
+        TravelOrderCache $travelOrderCache,
+    ): JsonResponse {
         Gate::authorize('viewAny', TravelOrder::class);
 
         $filters = $request->validated();
         $perPage = (int) ($filters['per_page'] ?? 15);
+        $page = max(1, $request->integer('page', 1));
         unset($filters['per_page']);
 
-        $travelOrders = $travelOrderQuery->paginate($request->user(), $filters, $perPage);
+        $payload = $travelOrderCache->rememberList(
+            $request->user(),
+            $filters,
+            $perPage,
+            $page,
+            function () use ($travelOrderQuery, $request, $filters, $perPage): array {
+                $travelOrders = $travelOrderQuery->paginate($request->user(), $filters, $perPage);
 
-        return TravelOrderResource::collection($travelOrders);
+                return TravelOrderResource::collection($travelOrders)
+                    ->response()
+                    ->getData(true);
+            },
+        );
+
+        return response()->json($payload);
     }
 
     public function store(StoreTravelOrderRequest $request, CreateTravelOrder $createTravelOrder): JsonResponse
@@ -47,7 +63,7 @@ class TravelOrderController extends Controller
     {
         Gate::authorize('view', $travelOrder);
 
-        return new TravelOrderResource($travelOrder->load('user'));
+        return new TravelOrderResource($travelOrder->load('user:id,name,email'));
     }
 
     public function update(

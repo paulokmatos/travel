@@ -50,8 +50,8 @@ class TravelOrder extends Model
             ->when($filters['destination'] ?? null, fn (Builder $query, string $destination): Builder => $query->where('destination', 'like', "%{$destination}%"))
             ->when($filters['created_from'] ?? null, fn (Builder $query, string $date): Builder => $query->where('created_at', '>=', CarbonImmutable::parse($date)->startOfDay()))
             ->when($filters['created_to'] ?? null, fn (Builder $query, string $date): Builder => $query->where('created_at', '<=', CarbonImmutable::parse($date)->endOfDay()))
-            ->when($filters['travel_from'] ?? null, fn (Builder $query, string $date): Builder => $query->whereDate('departure_date', '>=', $date))
-            ->when($filters['travel_to'] ?? null, fn (Builder $query, string $date): Builder => $query->whereDate('return_date', '<=', $date));
+            ->when($filters['travel_from'] ?? null, fn (Builder $query, string $date): Builder => $query->where('departure_date', '>=', $date))
+            ->when($filters['travel_to'] ?? null, fn (Builder $query, string $date): Builder => $query->where('return_date', '<=', $date));
     }
 
     protected function casts(): array
