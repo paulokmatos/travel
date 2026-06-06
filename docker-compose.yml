@@ -1,6 +1,9 @@
 services:
   app:
-    build: .
+    build:
+      context: .
+      args:
+        INSTALL_DEV: "false"
     ports:
       - "8000:8000"
     environment:
@@ -15,8 +18,9 @@ services:
       DB_DATABASE: travel
       DB_USERNAME: root
       DB_PASSWORD: secret
-      CACHE_STORE: database
-      QUEUE_CONNECTION: database
+      CACHE_STORE: redis
+      QUEUE_CONNECTION: redis
+      REDIS_HOST: redis
       SESSION_DRIVER: database
       MAIL_MAILER: log
       APP_RUN_MIGRATIONS: "true"
@@ -27,6 +31,8 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/up"]
       interval: 10s
@@ -35,7 +41,10 @@ services:
       start_period: 20s
 
   queue:
-    build: .
+    build:
+      context: .
+      args:
+        INSTALL_DEV: "false"
     command: php artisan queue:work --tries=3 --timeout=60
     environment:
       APP_ENV: local
@@ -49,8 +58,9 @@ services:
       DB_DATABASE: travel
       DB_USERNAME: root
       DB_PASSWORD: secret
-      CACHE_STORE: database
-      QUEUE_CONNECTION: database
+      CACHE_STORE: redis
+      QUEUE_CONNECTION: redis
+      REDIS_HOST: redis
       SESSION_DRIVER: database
       MAIL_MAILER: log
     depends_on:
@@ -58,12 +68,38 @@ services:
         condition: service_healthy
       mysql:
         condition: service_healthy
+      redis:
+        condition: service_healthy
 
   test:
-    build: .
+    build:
+      context: .
+      args:
+        INSTALL_DEV: "true"
     command: php artisan test --compact
     profiles:
       - test
+    environment:
+      APP_ENV: testing
+      APP_DEBUG: "true"
+      APP_KEY: base64:pk9tN/BwN8c40ZZsN1VpgSBYabC+xP8iSC8xmhG/8E0=
+      JWT_SECRET: testing-jwt-secret-for-travel-orders
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ":memory:"
+      DB_URL: ""
+      CACHE_STORE: array
+      QUEUE_CONNECTION: sync
+      SESSION_DRIVER: array
+      MAIL_MAILER: array
+
+  mutation:
+    build:
+      context: .
+      args:
+        INSTALL_DEV: "true"
+    command: composer test:mutation:pcov
+    profiles:
+      - mutation
     environment:
       APP_ENV: testing
       APP_DEBUG: "true"
@@ -96,6 +132,16 @@ services:
     image: axllent/mailpit:latest
     ports:
       - "8025:8025"
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
 
 volumes:
   mysql-data:
