@@ -6,6 +6,7 @@ use App\Enums\TravelOrderStatus;
 use App\Models\TravelOrder;
 use App\Models\User;
 use App\Notifications\TravelOrderStatusChanged;
+use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
@@ -17,12 +18,16 @@ class TravelOrderApiTest extends TestCase
     public function test_user_can_register_login_and_protected_routes_require_a_token(): void
     {
         $this->getJson('/api/v1/travel-orders')->assertUnauthorized();
+        $this->get('/api/v1/travel-orders')
+            ->assertUnauthorized()
+            ->assertJsonPath('message', 'Unauthenticated.');
 
         $registerResponse = $this->postJson('/api/v1/auth/register', [
             'name' => 'Paulo Travel',
             'email' => 'paulo@example.com',
             'password' => 'password123',
             'password_confirmation' => 'password123',
+            'is_admin' => true,
         ]);
 
         $registerResponse
@@ -42,6 +47,25 @@ class TravelOrderApiTest extends TestCase
 
         $loginResponse
             ->assertOk()
+            ->assertJsonStructure(['access_token', 'token_type', 'expires_in']);
+    }
+
+    public function test_database_seeder_provisions_the_initial_admin_user(): void
+    {
+        config()->set('services.admin.name', 'Travel Admin');
+        config()->set('services.admin.email', 'travel-admin@example.com');
+        config()->set('services.admin.password', 'admin-password');
+
+        $this->seed(DatabaseSeeder::class);
+
+        $admin = User::query()->where('email', 'travel-admin@example.com')->firstOrFail();
+
+        $this->assertTrue($admin->isAdmin());
+
+        $this->postJson('/api/v1/auth/login', [
+            'email' => 'travel-admin@example.com',
+            'password' => 'admin-password',
+        ])->assertOk()
             ->assertJsonStructure(['access_token', 'token_type', 'expires_in']);
     }
 

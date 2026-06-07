@@ -8,6 +8,7 @@ Repositorio: `https://github.com/paulokmatos/travel`
 
 - [Visao Geral](#visao-geral)
 - [Stack](#stack)
+- [Usuario Administrador](#usuario-administrador)
 - [Iniciar Do Zero Com Docker](#iniciar-do-zero-com-docker)
 - [Iniciar Do Zero Localmente](#iniciar-do-zero-localmente)
 - [Mini Documentacao Da API](#mini-documentacao-da-api)
@@ -41,6 +42,39 @@ Fluxo principal:
 - Infection para testes de mutacao
 - Laravel Pint para formatacao PHP
 - Docker Compose com `app`, `queue`, `mysql`, `redis`, `mailpit`, `test` e `mutation`
+
+## Usuario Administrador
+
+O administrador e um usuario normal da tabela `users` com `is_admin=true`.
+
+Como ele e criado:
+
+- O cadastro publico (`POST /api/v1/auth/register`) sempre cria usuario comum.
+- Campos como `is_admin` enviados no registro publico sao ignorados.
+- O admin inicial e criado ou atualizado pelo `DatabaseSeeder`.
+- O seeder usa as variaveis `ADMIN_NAME`, `ADMIN_EMAIL` e `ADMIN_PASSWORD`.
+
+Credenciais padrao no Docker:
+
+```text
+email: admin@example.com
+senha: password
+```
+
+Para trocar o admin inicial, defina as variaveis antes de rodar `php artisan db:seed`:
+
+```env
+ADMIN_NAME="Travel Admin"
+ADMIN_EMAIL=travel-admin@example.com
+ADMIN_PASSWORD=uma-senha-forte
+```
+
+Permissoes do admin:
+
+- Pode listar e consultar todos os pedidos.
+- Pode aprovar ou cancelar pedidos de outros usuarios.
+- Nao pode aprovar ou cancelar pedido criado por ele mesmo.
+- Nao passa pelas regras de edicao do dono; edicao de destino/datas continua restrita ao solicitante enquanto o pedido estiver `solicitado`.
 
 ## Iniciar Do Zero Com Docker
 
@@ -683,6 +717,18 @@ Se estiver rodando localmente, garanta que `JWT_SECRET` existe:
 ```bash
 php artisan jwt:secret
 ```
+
+### Erro `Route [login] not defined`
+
+Rotas da API nao usam tela de login web. Quando uma rota protegida e chamada sem token, a resposta esperada e JSON `401`:
+
+```json
+{
+  "message": "Unauthenticated."
+}
+```
+
+O bootstrap da aplicacao configura rotas `api/*` para renderizar JSON e nao redirecionar convidados para uma rota `login`.
 
 ### Banco Nao Conecta No Docker
 
