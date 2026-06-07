@@ -9,11 +9,11 @@ class TravelOrderStatusTransition
 {
     public function canTransition(TravelOrderStatus $from, TravelOrderStatus $to): bool
     {
-        if ($from !== TravelOrderStatus::Solicitado) {
+        if ($from !== TravelOrderStatus::REQUESTED) {
             return false;
         }
 
-        return in_array($to, [TravelOrderStatus::Aprovado, TravelOrderStatus::Cancelado], true);
+        return in_array($to, [TravelOrderStatus::APPROVED, TravelOrderStatus::CANCELED], true);
     }
 
     public function assertCanTransition(TravelOrderStatus $from, TravelOrderStatus $to): void

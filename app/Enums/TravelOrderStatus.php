@@ -4,9 +4,9 @@ namespace App\Enums;
 
 enum TravelOrderStatus: string
 {
-    case Solicitado = 'solicitado';
-    case Aprovado = 'aprovado';
-    case Cancelado = 'cancelado';
+    case REQUESTED = 'solicitado';
+    case APPROVED = 'aprovado';
+    case CANCELED = 'cancelado';
 
     /**
      * @return array<int, string>

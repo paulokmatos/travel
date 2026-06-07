@@ -84,7 +84,7 @@ class TravelOrderApiTest extends TestCase
             ->assertCreated()
             ->assertJsonPath('data.requester_name', 'Requester')
             ->assertJsonPath('data.destination', 'Lisbon')
-            ->assertJsonPath('data.status', TravelOrderStatus::Solicitado->value);
+            ->assertJsonPath('data.status', TravelOrderStatus::REQUESTED->value);
 
         $travelOrder = TravelOrder::query()->firstOrFail();
 
@@ -209,22 +209,22 @@ class TravelOrderApiTest extends TestCase
         $adminTravelOrder = TravelOrder::factory()->for($requestingAdmin)->create();
 
         $this->patchJson("/api/v1/travel-orders/{$travelOrder->id}/status", [
-            'status' => TravelOrderStatus::Aprovado->value,
+            'status' => TravelOrderStatus::APPROVED->value,
         ], $this->authorizationHeader($user))->assertForbidden();
 
         $this->patchJson("/api/v1/travel-orders/{$adminTravelOrder->id}/status", [
-            'status' => TravelOrderStatus::Aprovado->value,
+            'status' => TravelOrderStatus::APPROVED->value,
         ], $this->authorizationHeader($requestingAdmin))->assertForbidden();
 
         Notification::fake();
 
         $response = $this->patchJson("/api/v1/travel-orders/{$travelOrder->id}/status", [
-            'status' => TravelOrderStatus::Aprovado->value,
+            'status' => TravelOrderStatus::APPROVED->value,
         ], $this->authorizationHeader($admin));
 
         $response
             ->assertOk()
-            ->assertJsonPath('data.status', TravelOrderStatus::Aprovado->value);
+            ->assertJsonPath('data.status', TravelOrderStatus::APPROVED->value);
 
         Notification::assertSentTo(
             $user,
@@ -243,11 +243,11 @@ class TravelOrderApiTest extends TestCase
         $canceledTravelOrder = TravelOrder::factory()->for($user)->canceled()->create();
 
         $this->patchJson("/api/v1/travel-orders/{$approvedTravelOrder->id}/status", [
-            'status' => TravelOrderStatus::Cancelado->value,
+            'status' => TravelOrderStatus::CANCELED->value,
         ], $this->authorizationHeader($admin))->assertStatus(409);
 
         $this->patchJson("/api/v1/travel-orders/{$canceledTravelOrder->id}/status", [
-            'status' => TravelOrderStatus::Aprovado->value,
+            'status' => TravelOrderStatus::APPROVED->value,
         ], $this->authorizationHeader($admin))->assertStatus(409);
     }
 

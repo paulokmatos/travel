@@ -14,8 +14,8 @@ class TravelOrderStatusTransitionTest extends TestCase
     {
         $transition = new TravelOrderStatusTransition;
 
-        $this->assertTrue($transition->canTransition(TravelOrderStatus::Solicitado, TravelOrderStatus::Aprovado));
-        $this->assertTrue($transition->canTransition(TravelOrderStatus::Solicitado, TravelOrderStatus::Cancelado));
+        $this->assertTrue($transition->canTransition(TravelOrderStatus::REQUESTED, TravelOrderStatus::APPROVED));
+        $this->assertTrue($transition->canTransition(TravelOrderStatus::REQUESTED, TravelOrderStatus::CANCELED));
     }
 
     #[DataProvider('invalidTransitions')]
@@ -36,9 +36,9 @@ class TravelOrderStatusTransitionTest extends TestCase
     public static function invalidTransitions(): array
     {
         return [
-            'requested to requested' => [TravelOrderStatus::Solicitado, TravelOrderStatus::Solicitado],
-            'approved to canceled' => [TravelOrderStatus::Aprovado, TravelOrderStatus::Cancelado],
-            'canceled to approved' => [TravelOrderStatus::Cancelado, TravelOrderStatus::Aprovado],
+            'requested to requested' => [TravelOrderStatus::REQUESTED, TravelOrderStatus::REQUESTED],
+            'approved to canceled' => [TravelOrderStatus::APPROVED, TravelOrderStatus::CANCELED],
+            'canceled to approved' => [TravelOrderStatus::CANCELED, TravelOrderStatus::APPROVED],
         ];
     }
 }

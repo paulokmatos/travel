@@ -32,8 +32,8 @@ class UpdateTravelOrderStatusRequest extends FormRequest
             'status' => [
                 'required',
                 Rule::enum(TravelOrderStatus::class)->only([
-                    TravelOrderStatus::Aprovado,
-                    TravelOrderStatus::Cancelado,
+                    TravelOrderStatus::APPROVED,
+                    TravelOrderStatus::CANCELED,
                 ]),
             ],
         ];

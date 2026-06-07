@@ -19,7 +19,7 @@ class CreateTravelOrder
         /** @var TravelOrder $travelOrder */
         $travelOrder = $user->travelOrders()->create([
             ...$data,
-            'status' => TravelOrderStatus::Solicitado,
+            'status' => TravelOrderStatus::REQUESTED,
         ]);
 
         $this->travelOrderCache->bustFor($user);

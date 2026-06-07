@@ -26,7 +26,7 @@ class TravelOrderPolicy
     public function update(User $user, TravelOrder $travelOrder): bool
     {
         return $travelOrder->user_id === $user->id
-            && $travelOrder->status === TravelOrderStatus::Solicitado;
+            && $travelOrder->status === TravelOrderStatus::REQUESTED;
     }
 
     public function updateStatus(User $user, TravelOrder $travelOrder): bool

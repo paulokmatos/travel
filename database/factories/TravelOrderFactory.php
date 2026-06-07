@@ -24,21 +24,21 @@ class TravelOrderFactory extends Factory
             'destination' => fake()->city(),
             'departure_date' => fake()->dateTimeBetween('+1 week', '+2 months')->format('Y-m-d'),
             'return_date' => fake()->dateTimeBetween('+2 months', '+3 months')->format('Y-m-d'),
-            'status' => TravelOrderStatus::Solicitado,
+            'status' => TravelOrderStatus::REQUESTED,
         ];
     }
 
     public function approved(): static
     {
         return $this->state(fn (array $attributes) => [
-            'status' => TravelOrderStatus::Aprovado,
+            'status' => TravelOrderStatus::APPROVED,
         ]);
     }
 
     public function canceled(): static
     {
         return $this->state(fn (array $attributes) => [
-            'status' => TravelOrderStatus::Cancelado,
+            'status' => TravelOrderStatus::CANCELED,
         ]);
     }
 }

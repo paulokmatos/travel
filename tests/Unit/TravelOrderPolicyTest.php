@@ -31,7 +31,7 @@ class TravelOrderPolicyTest extends TestCase
     public function test_owner_cannot_update_terminal_orders(): void
     {
         $user = $this->user(id: 1);
-        $travelOrder = $this->travelOrder(userId: 1, status: TravelOrderStatus::Aprovado);
+        $travelOrder = $this->travelOrder(userId: 1, status: TravelOrderStatus::APPROVED);
 
         $this->assertFalse($this->policy->update($user, $travelOrder));
     }
@@ -64,7 +64,7 @@ class TravelOrderPolicyTest extends TestCase
         return $user;
     }
 
-    private function travelOrder(int $userId, TravelOrderStatus $status = TravelOrderStatus::Solicitado): TravelOrder
+    private function travelOrder(int $userId, TravelOrderStatus $status = TravelOrderStatus::REQUESTED): TravelOrder
     {
         return new TravelOrder([
             'user_id' => $userId,
