@@ -1,204 +1,150 @@
 # Travel Orders API
 
-Microsservico em Laravel para gerenciar pedidos de viagem corporativa. A API usa JWT, MySQL, cache Redis, filas para notificacoes e regras de autorizacao por usuario/admin.
+## Resumo do Projeto
 
-Repositorio: `https://github.com/paulokmatos/travel`
+O projeto consiste em um desafio tecnico para criacao de um microsservico em Laravel que gerencia pedidos de viagem corporativa.
 
-## Sumario
+A API permite registrar usuarios, autenticar com JWT, criar pedidos de viagem, consultar pedidos, listar com filtros, editar pedidos em status inicial e permitir que usuarios administradores aprovem ou cancelem pedidos de outros usuarios.
 
-- [Visao Geral](#visao-geral)
-- [Stack](#stack)
-- [Usuario Administrador](#usuario-administrador)
-- [Iniciar Do Zero Com Docker](#iniciar-do-zero-com-docker)
-- [Iniciar Do Zero Localmente](#iniciar-do-zero-localmente)
-- [Mini Documentacao Da API](#mini-documentacao-da-api)
-- [Regras De Negocio](#regras-de-negocio)
-- [Arquitetura Do Projeto](#arquitetura-do-projeto)
-- [Banco De Dados](#banco-de-dados)
-- [Cache, Filas E Notificacoes](#cache-filas-e-notificacoes)
-- [Testes E Qualidade](#testes-e-qualidade)
-- [Troubleshooting](#troubleshooting)
+## Requisitos do Projeto
 
-## Visao Geral
+- Docker
+- Docker Compose
+- Git
 
-O sistema permite que usuarios criem e acompanhem pedidos de viagem corporativa. Cada pedido contem destino, data de ida, data de volta e status. Usuarios comuns gerenciam apenas seus proprios pedidos; administradores podem consultar todos e aprovar ou cancelar pedidos de outros usuarios.
-
-Fluxo principal:
-
-1. Um usuario se registra ou faz login.
-2. O usuario cria um pedido de viagem.
-3. Enquanto o pedido estiver `solicitado`, o dono pode editar destino e datas.
-4. Um administrador aprova ou cancela o pedido.
-5. O solicitante recebe notificacao por email e no banco.
-
-## Stack
+Para execucao local sem Docker, tambem sera necessario:
 
 - PHP 8.3
-- Laravel 13
-- MySQL 8.4
-- Redis 7 para cache e fila no Docker
-- JWT com `php-open-source-saver/jwt-auth`
-- PHPUnit 12
-- Infection para testes de mutacao
-- Laravel Pint para formatacao PHP
-- Docker Compose com `app`, `queue`, `mysql`, `redis`, `mailpit`, `test` e `mutation`
+- Composer 2
+- MySQL 8 ou compativel
+- Redis, caso use cache/fila Redis localmente
+- Node.js e NPM, apenas para executar scripts Vite
 
-## Usuario Administrador
+## Tecnologias utilizadas
 
-O administrador e um usuario normal da tabela `users` com `is_admin=true`.
+#### **Infraestrutura:**
 
-Como ele e criado:
+- **Docker:** Ferramenta de virtualizacao de containers.
+- **Docker Compose:** Utilizado para definir e gerenciar os containers Docker.
+- **MySQL 8.4:** Banco de dados relacional da aplicacao.
+- **Redis 7:** Utilizado no Docker para cache e fila.
+- **Mailpit:** Caixa de email local para apoio em testes de notificacao.
 
-- O cadastro publico (`POST /api/v1/auth/register`) sempre cria usuario comum.
-- Campos como `is_admin` enviados no registro publico sao ignorados.
-- O admin inicial e criado ou atualizado pelo `DatabaseSeeder`.
-- O seeder usa as variaveis `ADMIN_NAME`, `ADMIN_EMAIL` e `ADMIN_PASSWORD`.
+#### **Analise de Codigo:**
 
-Credenciais padrao no Docker:
+- **Laravel Pint:** Ferramenta de formatacao automatica do codigo PHP.
 
-```text
-email: admin@example.com
-senha: password
-```
+#### **Testes:**
 
-Para trocar o admin inicial, defina as variaveis antes de rodar `php artisan db:seed`:
+- **PHPUnit:** Framework para testes unitarios e de integracao em PHP.
+- **Infection:** Framework para testes de mutacao e validacao da qualidade da cobertura.
 
-```env
-ADMIN_NAME="Travel Admin"
-ADMIN_EMAIL=travel-admin@example.com
-ADMIN_PASSWORD=uma-senha-forte
-```
+#### **Desenvolvimento:**
 
-Permissoes do admin:
+- **PHP 8.3:** Linguagem base da aplicacao.
+- **Laravel 13:** Framework utilizado para API, validacao, Eloquent ORM, rotas, policies e notificacoes.
+- **JWT Auth:** Pacote `php-open-source-saver/jwt-auth` para autenticacao via token.
+- **Eloquent ORM:** Camada de persistencia utilizada para interacao com o banco MySQL.
+- **Laravel Notifications:** Envio de notificacoes por `mail` e `database`.
+- **Laravel Queues:** Processamento assincromo de notificacoes.
 
-- Pode listar e consultar todos os pedidos.
-- Pode aprovar ou cancelar pedidos de outros usuarios.
-- Nao pode aprovar ou cancelar pedido criado por ele mesmo.
-- Nao passa pelas regras de edicao do dono; edicao de destino/datas continua restrita ao solicitante enquanto o pedido estiver `solicitado`.
+## Como iniciar o projeto
 
-## Iniciar Do Zero Com Docker
-
-Este e o caminho recomendado para validar o projeto sem instalar PHP, MySQL ou Redis localmente.
-
-### 1. Pre-requisitos
-
-- Git
-- Docker
-- Docker Compose v2
-
-### 2. Clonar O Repositorio
-
-```bash
-git clone git@github.com:paulokmatos/travel.git
-cd travel
-```
-
-Tambem funciona via HTTPS:
+1 - Clone o repositorio
 
 ```bash
 git clone https://github.com/paulokmatos/travel.git
 cd travel
 ```
 
-### 3. Subir A Aplicacao
+2 - Suba os containers da aplicacao
 
 ```bash
 docker compose up --build -d
 ```
 
-O container `app` espera o MySQL ficar saudavel e, por padrao no Compose, executa:
+O build da imagem instala as dependencias do Composer. O container `app` aguarda o MySQL ficar saudavel e executa automaticamente:
 
-- `php artisan migrate --force`
-- `php artisan db:seed --force`
+```bash
+php artisan migrate --force
+php artisan db:seed --force
+```
 
-### 4. Acessar Os Servicos
+3 - Verifique se os containers estao ativos
 
-| Servico | URL / porta | Uso |
-| --- | --- | --- |
-| API | `http://localhost:8000/api/v1` | Endpoints REST |
-| Health check | `http://localhost:8000/up` | Verificar app online |
-| Mailpit | `http://localhost:8025` | UI para emails locais |
-| MySQL | `localhost:3306` | Banco `travel` |
-| Redis | `localhost:6379` | Cache e fila |
+```bash
+docker compose ps
+```
 
-Credenciais do admin criado pelo seeder no Docker:
+4 - Liste as rotas da API
+
+```bash
+docker compose exec app php artisan route:list --path=api
+```
+
+5 - Execute os testes da aplicacao
+
+```bash
+docker compose --profile test run --rm test
+```
+
+6 - Execute os testes de mutacao
+
+```bash
+docker compose --profile mutation run --rm mutation
+```
+
+Apos subir os containers, o projeto estara acessivel na URL:
+
+```text
+http://localhost:8000/api/v1
+```
+
+Health check:
+
+```text
+http://localhost:8000/up
+```
+
+Servicos disponiveis:
+
+- API: `http://localhost:8000/api/v1`
+- Mailpit: `http://localhost:8025`
+- MySQL: `localhost:3306`
+- Redis: `localhost:6379`
+
+Credenciais do administrador inicial:
 
 ```text
 email: admin@example.com
 senha: password
 ```
 
-### 5. Verificar Se Esta Tudo De Pe
+## Como iniciar localmente
 
-```bash
-docker compose ps
-curl http://localhost:8000/up
-```
-
-### 6. Rodar Comandos Dentro Do Container
-
-```bash
-docker compose exec app php artisan route:list --path=api
-docker compose exec app php artisan migrate:status
-docker compose exec app php artisan queue:work redis --tries=3 --timeout=60
-```
-
-O servico `queue` ja roda o worker automaticamente. O comando acima e util apenas para debug manual.
-
-### 7. Parar Ou Resetar O Ambiente
-
-Parar containers mantendo o volume do banco:
-
-```bash
-docker compose down
-```
-
-Remover containers e zerar dados do MySQL:
-
-```bash
-docker compose down -v
-```
-
-## Iniciar Do Zero Localmente
-
-Use este fluxo quando quiser rodar a aplicacao fora do Docker.
-
-### 1. Pre-requisitos Locais
-
-- PHP 8.3
-- Composer 2
-- MySQL 8 ou compativel
-- Redis, se usar `CACHE_STORE=redis` e `QUEUE_CONNECTION=redis`
-- Node.js e NPM, apenas se for executar Vite/build frontend
-
-Extensoes PHP relevantes:
-
-- `bcmath`
-- `pcntl`
-- `pdo_mysql`
-- `zip`
-- `redis`, quando usar Redis local
-
-### 2. Instalar Dependencias
+1 - Instale as dependencias
 
 ```bash
 composer install
 npm install
 ```
 
-### 3. Criar E Configurar O `.env`
+2 - Copie o arquivo `.env.example`
 
 ```bash
 cp .env.example .env
+```
+
+3 - Gere as chaves da aplicacao e do JWT
+
+```bash
 php artisan key:generate
 php artisan jwt:secret
 ```
 
-Configure o banco no `.env`:
+4 - Configure o banco no `.env`
 
 ```env
-APP_URL=http://localhost:8000
-
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
@@ -215,125 +161,220 @@ ADMIN_EMAIL=admin@example.com
 ADMIN_PASSWORD=password
 ```
 
-Para Redis local:
-
-```env
-CACHE_STORE=redis
-QUEUE_CONNECTION=redis
-REDIS_HOST=127.0.0.1
-REDIS_PORT=6379
-```
-
-### 4. Criar Banco E Rodar Migrations
-
-Crie o banco `travel` no MySQL e execute:
+5 - Rode migrations e seeders
 
 ```bash
 php artisan migrate --seed
 ```
 
-O seeder cria um usuario administrador usando `ADMIN_NAME`, `ADMIN_EMAIL` e `ADMIN_PASSWORD`.
-
-### 5. Rodar API E Worker
-
-Terminal 1:
+6 - Inicie a API e o worker da fila
 
 ```bash
 php artisan serve
-```
-
-Terminal 2:
-
-```bash
 php artisan queue:work --tries=3 --timeout=60
 ```
 
-API local:
+## Comandos uteis
 
-```text
-http://localhost:8000/api/v1
-```
-
-### 6. Fluxo De Desenvolvimento Opcional
-
-O script abaixo roda servidor, fila, logs e Vite juntos:
+Rodar suite completa:
 
 ```bash
-composer run dev
+php artisan test --compact
 ```
 
-## Mini Documentacao Da API
+Rodar testes de feature:
 
-Base URL:
+```bash
+composer test:feature
+```
+
+Rodar testes unitarios:
+
+```bash
+composer test:unit
+```
+
+Rodar teste focado da API:
+
+```bash
+php artisan test --compact tests/Feature/TravelOrderApiTest.php
+```
+
+Rodar mutation testing local com Xdebug:
+
+```bash
+composer test:mutation
+```
+
+Rodar quality gate de mutation testing:
+
+```bash
+composer test:mutation:ci
+```
+
+Formatar codigo PHP:
+
+```bash
+vendor/bin/pint --dirty --format agent
+```
+
+Parar containers:
+
+```bash
+docker compose down
+```
+
+Zerar banco e volumes Docker:
+
+```bash
+docker compose down -v
+```
+
+# Arquitetura do projeto
+
+**Domain:** Contem o enum `TravelOrderStatus`, o model `TravelOrder`, regras puras de transicao de status e validacoes de datas.
+
+**Application:** Inclui Actions, Queries e Services responsaveis pelos casos de uso, filtros de listagem e cache.
+
+**Infra:** Contem migrations, factories, seeders, Docker, banco MySQL, Redis, filas e notificacoes persistidas.
+
+**Presentation:** Contem Controllers, Form Requests, API Resources, Policies e rotas HTTP em `routes/api.php`.
+
+Estrutura principal:
 
 ```text
-http://localhost:8000/api/v1
+app/
+  Actions/
+  Enums/TravelOrderStatus.php
+  Http/Controllers/Api/V1/
+  Http/Requests/Api/V1/
+  Http/Resources/TravelOrderResource.php
+  Models/
+  Notifications/
+  Policies/
+  Queries/
+  Rules/
+  Services/
+  Support/
+database/
+  factories/
+  migrations/
+  seeders/
+routes/api.php
+tests/
+  Feature/
+  Unit/
 ```
 
-Todas as rotas de pedidos exigem:
+# Regras de negocio
+
+- Cada pedido pertence a um usuario autenticado.
+- Usuarios comuns podem criar, listar, consultar e editar apenas seus proprios pedidos.
+- Administradores podem listar e consultar todos os pedidos.
+- Apenas administradores podem aprovar ou cancelar pedidos.
+- Um administrador nao pode aprovar ou cancelar pedido criado por ele mesmo.
+- O cadastro publico sempre cria usuario comum.
+- O administrador inicial e criado pelo `DatabaseSeeder` usando `ADMIN_NAME`, `ADMIN_EMAIL` e `ADMIN_PASSWORD`.
+- Pedidos nascem com status `solicitado`.
+- Pedidos em status `solicitado` podem ser alterados para `aprovado` ou `cancelado`.
+- Pedidos `aprovado` ou `cancelado` sao estados terminais e nao podem mudar de status.
+- Quando um pedido e aprovado ou cancelado, uma notificacao e enviada para o solicitante.
+
+Status publicos da API:
+
+- `solicitado`
+- `aprovado`
+- `cancelado`
+
+Cases internos do enum PHP:
+
+- `REQUESTED`
+- `APPROVED`
+- `CANCELED`
+
+# Autenticacao
+
+Todas as rotas de pedidos exigem token JWT no header:
 
 ```http
 Authorization: Bearer <token>
 ```
 
-As rotas ficam sob throttle global de `60` requisicoes por minuto. Login tem limite proprio de `10` requisicoes por minuto.
+Caso uma rota protegida seja chamada sem token, a API retorna:
 
-### Autenticacao
-
-| Metodo | Rota | Auth | Descricao |
-| --- | --- | --- | --- |
-| POST | `/auth/register` | Nao | Cria usuario comum e retorna JWT |
-| POST | `/auth/login` | Nao | Autentica e retorna JWT |
-| GET | `/auth/me` | Sim | Retorna usuario autenticado |
-| POST | `/auth/refresh` | Sim | Renova token |
-| POST | `/auth/logout` | Sim | Invalida token |
-
-#### Registrar Usuario
-
-```bash
-curl -X POST http://localhost:8000/api/v1/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Paulo Matos",
-    "email": "paulo@example.com",
-    "password": "password123",
-    "password_confirmation": "password123"
-  }'
-```
-
-Resposta:
+**HTTP STATUS 401**
 
 ```json
 {
-  "access_token": "...",
+  "message": "Unauthenticated."
+}
+```
+
+# Endpoints do projeto
+
+## [ POST ] /api/v1/auth/register
+
+Cria um usuario comum e retorna um token JWT.
+
+Exemplo de entrada:
+
+```json
+{
+  "name": "Paulo Matos",
+  "email": "paulo@example.com",
+  "password": "password123",
+  "password_confirmation": "password123"
+}
+```
+
+Exemplo de saida:
+
+**HTTP STATUS 201**
+
+```json
+{
+  "access_token": "jwt-token",
   "token_type": "bearer",
   "expires_in": 3600
 }
 ```
 
-Registro publico sempre cria usuario comum. A criacao de admin acontece pelo seeder.
+**HTTP STATUS 422** caso sejam enviados dados invalidos.
 
-#### Login
+## [ POST ] /api/v1/auth/login
 
-```bash
-curl -X POST http://localhost:8000/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "admin@example.com",
-    "password": "password"
-  }'
+Autentica um usuario e retorna um token JWT.
+
+Exemplo de entrada:
+
+```json
+{
+  "email": "admin@example.com",
+  "password": "password"
+}
 ```
 
-Guarde o valor de `access_token` para as proximas chamadas.
+Exemplo de saida:
 
-#### Usuario Autenticado
+**HTTP STATUS 200**
 
-```bash
-curl http://localhost:8000/api/v1/auth/me \
-  -H "Authorization: Bearer <token>"
+```json
+{
+  "access_token": "jwt-token",
+  "token_type": "bearer",
+  "expires_in": 3600
+}
 ```
 
-Resposta:
+**HTTP STATUS 401** caso as credenciais sejam invalidas.
+
+## [ GET ] /api/v1/auth/me
+
+Retorna os dados do usuario autenticado.
+
+Exemplo de saida:
+
+**HTTP STATUS 200**
 
 ```json
 {
@@ -346,116 +387,55 @@ Resposta:
 }
 ```
 
-### Pedidos De Viagem
+**HTTP STATUS 401** caso o token nao seja enviado ou seja invalido.
 
-| Metodo | Rota | Auth | Descricao |
-| --- | --- | --- | --- |
-| GET | `/travel-orders` | Sim | Lista pedidos paginados |
-| POST | `/travel-orders` | Sim | Cria pedido para o usuario autenticado |
-| GET | `/travel-orders/{id}` | Sim | Consulta um pedido |
-| PATCH/PUT | `/travel-orders/{id}` | Sim | Edita destino e datas |
-| PATCH | `/travel-orders/{id}/status` | Sim/admin | Aprova ou cancela pedido |
+## [ POST ] /api/v1/auth/refresh
 
-#### Criar Pedido
+Renova o token JWT do usuario autenticado.
 
-```bash
-curl -X POST http://localhost:8000/api/v1/travel-orders \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "destination": "Lisbon",
-    "departure_date": "2026-07-10",
-    "return_date": "2026-07-20"
-  }'
+Exemplo de saida:
+
+**HTTP STATUS 200**
+
+```json
+{
+  "access_token": "new-jwt-token",
+  "token_type": "bearer",
+  "expires_in": 3600
+}
 ```
 
-Validacoes:
+## [ POST ] /api/v1/auth/logout
 
-- `destination`: obrigatorio, string, 2 a 255 caracteres; espacos extras sao normalizados.
-- `departure_date`: obrigatorio, formato `YYYY-MM-DD`.
-- `return_date`: obrigatorio, formato `YYYY-MM-DD`, maior ou igual a `departure_date`.
-- `requester_name`, `user_id` e `status` nao devem ser enviados; o backend define esses valores.
+Invalida o token JWT atual.
 
-#### Listar Pedidos
+Exemplo de saida:
 
-```bash
-curl "http://localhost:8000/api/v1/travel-orders?status=aprovado&destination=Lis&travel_from=2026-07-01&travel_to=2026-07-31" \
-  -H "Authorization: Bearer <token>"
+**HTTP STATUS 200**
+
+```json
+{
+  "message": "Token invalidated."
+}
 ```
 
-Usuarios comuns veem apenas os proprios pedidos. Administradores veem todos.
+## [ POST ] /api/v1/travel-orders
 
-Filtros aceitos:
+Cria um pedido de viagem para o usuario autenticado.
 
-| Filtro | Formato | Descricao |
-| --- | --- | --- |
-| `status` | `solicitado`, `aprovado`, `cancelado` | Filtra por status |
-| `destination` | texto | Busca parcial por destino |
-| `created_from` | `YYYY-MM-DD` | Data inicial de criacao |
-| `created_to` | `YYYY-MM-DD` | Data final de criacao |
-| `travel_from` | `YYYY-MM-DD` | Data inicial da viagem |
-| `travel_to` | `YYYY-MM-DD` | Data final da viagem |
-| `per_page` | 1 a 100 | Tamanho da pagina |
-| `page` | a partir de 1 | Numero da pagina |
+Exemplo de entrada:
 
-Intervalos invalidos retornam `422`, por exemplo `created_to` antes de `created_from`.
-
-#### Consultar Pedido
-
-```bash
-curl http://localhost:8000/api/v1/travel-orders/1 \
-  -H "Authorization: Bearer <token>"
+```json
+{
+  "destination": "Lisbon",
+  "departure_date": "2026-07-10",
+  "return_date": "2026-07-20"
+}
 ```
 
-Usuario comum so acessa pedidos proprios. Admin acessa qualquer pedido.
+Exemplo de saida:
 
-#### Editar Pedido
-
-```bash
-curl -X PATCH http://localhost:8000/api/v1/travel-orders/1 \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "destination": "Porto",
-    "departure_date": "2026-08-01",
-    "return_date": "2026-08-08"
-  }'
-```
-
-Regras:
-
-- Somente o dono pode editar.
-- O pedido precisa estar com status `solicitado`.
-- O payload e parcial, mas deve conter pelo menos um dos campos: `destination`, `departure_date`, `return_date`.
-- Datas continuam respeitando o intervalo valido. Em atualizacao parcial, a regra compara com a data ja salva.
-
-#### Aprovar Ou Cancelar Pedido
-
-```bash
-curl -X PATCH http://localhost:8000/api/v1/travel-orders/1/status \
-  -H "Authorization: Bearer <admin-token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "status": "aprovado"
-  }'
-```
-
-Valores aceitos:
-
-- `aprovado`
-- `cancelado`
-
-Regras:
-
-- Apenas admin pode alterar status.
-- O admin nao pode alterar o status de um pedido criado por ele mesmo.
-- Somente pedidos `solicitado` podem virar `aprovado` ou `cancelado`.
-- Tentar cancelar pedido ja aprovado retorna `409 Conflict`.
-- Tentar alterar um pedido `cancelado` ou `aprovado` tambem retorna `409 Conflict`.
-
-### Formato De Resposta
-
-Pedido:
+**HTTP STATUS 201**
 
 ```json
 {
@@ -477,312 +457,202 @@ Pedido:
 }
 ```
 
-Listagens seguem o formato padrao de Resource Collection do Laravel:
+**HTTP STATUS 422** caso a data de volta seja anterior a data de ida ou existam campos invalidos.
+
+## [ GET ] /api/v1/travel-orders
+
+Lista pedidos paginados.
+
+Usuarios comuns visualizam apenas os proprios pedidos. Administradores visualizam todos.
+
+Filtros disponiveis:
+
+- `status`: `solicitado`, `aprovado`, `cancelado`
+- `destination`: busca parcial por destino
+- `created_from`: data inicial de criacao no formato `YYYY-MM-DD`
+- `created_to`: data final de criacao no formato `YYYY-MM-DD`
+- `travel_from`: data inicial de viagem no formato `YYYY-MM-DD`
+- `travel_to`: data final de viagem no formato `YYYY-MM-DD`
+- `per_page`: quantidade por pagina, de 1 a 100
+- `page`: pagina atual
+
+Exemplo de chamada:
+
+```text
+GET /api/v1/travel-orders?status=aprovado&destination=Lis&travel_from=2026-07-01&travel_to=2026-07-31
+```
+
+Exemplo de saida:
+
+**HTTP STATUS 200**
 
 ```json
 {
-  "data": [],
+  "data": [
+    {
+      "id": 1,
+      "requester_name": "Paulo Matos",
+      "requester": {
+        "id": 2,
+        "name": "Paulo Matos",
+        "email": "paulo@example.com"
+      },
+      "destination": "Lisbon",
+      "departure_date": "2026-07-10",
+      "return_date": "2026-07-20",
+      "status": "aprovado",
+      "created_at": "2026-06-06T19:00:00.000000Z",
+      "updated_at": "2026-06-06T19:00:00.000000Z"
+    }
+  ],
   "links": {},
   "meta": {}
 }
 ```
 
-### Erros Comuns
+**HTTP STATUS 422** caso os filtros sejam invalidos.
 
-| Status | Quando ocorre |
-| --- | --- |
-| 401 | Token ausente, invalido ou credenciais invalidas |
-| 403 | Usuario autenticado sem permissao para o recurso |
-| 404 | Pedido inexistente |
-| 409 | Transicao de status invalida |
-| 422 | Payload ou filtro invalido |
-| 429 | Limite de requisicoes excedido |
+## [ GET ] /api/v1/travel-orders/{id}
 
-## Regras De Negocio
+Consulta um pedido de viagem pelo ID.
 
-- Cada pedido pertence a um usuario autenticado.
-- Usuarios comuns podem criar, consultar, listar e editar apenas seus proprios pedidos.
-- Administradores podem consultar e listar todos os pedidos.
-- Apenas administradores podem aprovar ou cancelar pedidos.
-- O proprio solicitante nunca pode aprovar ou cancelar seu pedido, mesmo sendo admin.
-- Pedidos nascem sempre com status `solicitado`.
-- Transicoes validas:
-  - `solicitado -> aprovado`
-  - `solicitado -> cancelado`
-- Estados terminais:
-  - `aprovado`
-  - `cancelado`
-- Estados terminais nao podem mudar de status.
-- Sempre que um pedido e aprovado ou cancelado, o solicitante recebe notificacao pelos canais `mail` e `database`.
+Exemplo de saida:
 
-## Arquitetura Do Projeto
-
-Principais responsabilidades:
-
-| Camada | Arquivo/pasta | Responsabilidade |
-| --- | --- | --- |
-| Rotas | `routes/api.php` | Versionamento `/api/v1`, throttle, auth JWT |
-| Controllers | `app/Http/Controllers/Api/V1` | Orquestrar requests, actions, resources e policies |
-| Form Requests | `app/Http/Requests/Api/V1` | Autorizacao e validacao de entrada |
-| Resources | `app/Http/Resources` | Formato JSON das respostas |
-| Models | `app/Models` | Entidades Eloquent e relacionamentos |
-| Policies | `app/Policies` | Regras de acesso por dono/admin |
-| Actions | `app/Actions` | Casos de uso: criar, editar e alterar status |
-| Queries | `app/Queries` | Consulta paginada com filtros |
-| Services | `app/Services` | Cache versionado de listagens |
-| Support | `app/Support` | Regras puras de transicao de status |
-| Notifications | `app/Notifications` | Notificacao enfileirada por mail e database |
-
-Estrutura resumida:
-
-```text
-app/
-  Actions/
-  Enums/TravelOrderStatus.php
-  Http/Controllers/Api/V1/
-  Http/Requests/Api/V1/
-  Http/Resources/TravelOrderResource.php
-  Models/TravelOrder.php
-  Notifications/TravelOrderStatusChanged.php
-  Policies/TravelOrderPolicy.php
-  Queries/TravelOrderQuery.php
-  Rules/ValidTravelDateRange.php
-  Services/TravelOrderCache.php
-  Support/TravelOrderStatusTransition.php
-database/
-  factories/
-  migrations/
-  seeders/
-routes/api.php
-tests/Feature/TravelOrderApiTest.php
-tests/Unit/
-```
-
-## Banco De Dados
-
-Tabelas principais:
-
-| Tabela | Descricao |
-| --- | --- |
-| `users` | Usuarios autenticaveis; possui `is_admin` |
-| `travel_orders` | Pedidos de viagem ligados a `users` |
-| `notifications` | Notificacoes persistidas do Laravel |
-| `jobs` / `failed_jobs` | Fila database, quando usada |
-
-Campos de `travel_orders`:
-
-| Campo | Tipo | Observacao |
-| --- | --- | --- |
-| `id` | bigint | Identificador do pedido |
-| `user_id` | foreign id | Solicitante |
-| `destination` | string | Destino |
-| `departure_date` | date | Data de ida |
-| `return_date` | date | Data de volta |
-| `status` | string | `solicitado`, `aprovado` ou `cancelado` |
-| `created_at` / `updated_at` | timestamps | Controle temporal |
-
-Indices relevantes:
-
-- `user_id, status`
-- `created_at, status`
-- `departure_date, return_date`
-- `destination`
-
-## Cache, Filas E Notificacoes
-
-Cache:
-
-- A listagem de pedidos usa cache por 60 segundos.
-- A chave considera usuario/admin, filtros, pagina, `per_page` e versao.
-- Mutacoes em pedidos incrementam versoes de cache para invalidar listagens afetadas.
-- Usuarios comuns usam versao por usuario; admins usam versao global.
-
-Fila:
-
-- No Docker, `QUEUE_CONNECTION=redis`.
-- O servico `queue` executa `php artisan queue:work --tries=3 --timeout=60`.
-- Localmente, e possivel usar `database` ou `redis`.
-
-Notificacoes:
-
-- A notificacao `TravelOrderStatusChanged` implementa `ShouldQueue`.
-- Os canais sao `mail` e `database`.
-- O disparo acontece depois do commit da transacao.
-- No Compose atual, `MAIL_MAILER=log`. Para ver emails no Mailpit, configure `MAIL_MAILER=smtp`, `MAIL_HOST=mailpit` e `MAIL_PORT=1025`.
-
-## Testes E Qualidade
-
-### Testes Locais
-
-Suite completa:
-
-```bash
-php artisan test --compact
-```
-
-Feature tests:
-
-```bash
-composer test:feature
-```
-
-Unit tests:
-
-```bash
-composer test:unit
-```
-
-Teste focado da API:
-
-```bash
-php artisan test --compact tests/Feature/TravelOrderApiTest.php
-```
-
-### Testes No Docker
-
-```bash
-docker compose --profile test run --rm test
-```
-
-### Mutation Testing
-
-Local com Xdebug coverage:
-
-```bash
-composer test:mutation
-```
-
-Gate de CI/local estrito com Xdebug:
-
-```bash
-composer test:mutation:ci
-```
-
-Docker com PCOV:
-
-```bash
-docker compose --profile mutation run --rm mutation
-```
-
-Configuracao:
-
-- Arquivo: `infection.json5`
-- Thresholds do gate: MSI minimo `70%` e Covered MSI minimo `80%`
-- Escopo principal: policies, rules, services e support
-
-### Formatacao
-
-```bash
-vendor/bin/pint --dirty --format agent
-```
-
-### Cobertura Relevante
-
-Feature tests cobrem:
-
-- Registro/login JWT
-- Bloqueio de rotas sem token
-- Criacao de pedidos
-- Validacao de datas
-- Listagem por dono e por admin
-- Consulta restrita por permissao
-- Filtros por status, destino, periodo de criacao e periodo de viagem
-- Edicao apenas de pedidos `solicitado`
-- Bloqueio de status por usuario comum
-- Bloqueio de status pelo proprio solicitante admin
-- Aprovacao/cancelamento por admin
-- Notificacao de alteracao de status
-- Bloqueio de transicoes terminais
-- Invalidacao de cache apos mutacoes
-
-Unit tests cobrem:
-
-- Policy de dono/admin
-- Transicoes de status
-- Regra de intervalo de datas
-- Cache versionado de listagens
-
-## Troubleshooting
-
-### Token JWT Invalido Ou Ausente
-
-Confira se a chamada envia:
-
-```http
-Authorization: Bearer <token>
-```
-
-Se estiver rodando localmente, garanta que `JWT_SECRET` existe:
-
-```bash
-php artisan jwt:secret
-```
-
-### Erro `Route [login] not defined`
-
-Rotas da API nao usam tela de login web. Quando uma rota protegida e chamada sem token, a resposta esperada e JSON `401`:
+**HTTP STATUS 200**
 
 ```json
 {
-  "message": "Unauthenticated."
+  "data": {
+    "id": 1,
+    "requester_name": "Paulo Matos",
+    "requester": {
+      "id": 2,
+      "name": "Paulo Matos",
+      "email": "paulo@example.com"
+    },
+    "destination": "Lisbon",
+    "departure_date": "2026-07-10",
+    "return_date": "2026-07-20",
+    "status": "solicitado",
+    "created_at": "2026-06-06T19:00:00.000000Z",
+    "updated_at": "2026-06-06T19:00:00.000000Z"
+  }
 }
 ```
 
-O bootstrap da aplicacao configura rotas `api/*` para renderizar JSON e nao redirecionar convidados para uma rota `login`.
+**HTTP STATUS 403** caso um usuario comum tente consultar pedido de outro usuario.
 
-### Banco Nao Conecta No Docker
+**HTTP STATUS 404** caso o pedido nao exista.
 
-Verifique a saude dos containers:
+## [ PATCH ] /api/v1/travel-orders/{id}
 
-```bash
-docker compose ps
-docker compose logs mysql
-docker compose logs app
+Edita destino, data de ida ou data de volta de um pedido.
+
+Somente o dono pode editar, e apenas enquanto o pedido estiver com status `solicitado`.
+
+Exemplo de entrada:
+
+```json
+{
+  "destination": "Porto",
+  "departure_date": "2026-08-01",
+  "return_date": "2026-08-08"
+}
 ```
 
-Para recriar tudo do zero:
+Exemplo de saida:
 
-```bash
-docker compose down -v
-docker compose up --build -d
+**HTTP STATUS 200**
+
+```json
+{
+  "data": {
+    "id": 1,
+    "requester_name": "Paulo Matos",
+    "requester": {
+      "id": 2,
+      "name": "Paulo Matos",
+      "email": "paulo@example.com"
+    },
+    "destination": "Porto",
+    "departure_date": "2026-08-01",
+    "return_date": "2026-08-08",
+    "status": "solicitado",
+    "created_at": "2026-06-06T19:00:00.000000Z",
+    "updated_at": "2026-06-06T19:10:00.000000Z"
+  }
+}
 ```
 
-### Migrations Nao Rodaram
+**HTTP STATUS 403** caso o usuario nao seja dono do pedido ou o pedido nao esteja mais `solicitado`.
 
-No Docker, confira se estas variaveis estao ativas no servico `app`:
+**HTTP STATUS 422** caso o payload seja invalido.
 
-```yaml
-APP_RUN_MIGRATIONS: "true"
-APP_RUN_SEEDERS: "true"
+## [ PATCH ] /api/v1/travel-orders/{id}/status
+
+Atualiza o status de um pedido para `aprovado` ou `cancelado`.
+
+Somente administradores podem executar esta operacao, e o administrador nao pode alterar o proprio pedido.
+
+Exemplo de entrada:
+
+```json
+{
+  "status": "aprovado"
+}
 ```
 
-Rode manualmente se necessario:
+Exemplo de saida:
 
-```bash
-docker compose exec app php artisan migrate --seed
+**HTTP STATUS 200**
+
+```json
+{
+  "data": {
+    "id": 1,
+    "requester_name": "Paulo Matos",
+    "requester": {
+      "id": 2,
+      "name": "Paulo Matos",
+      "email": "paulo@example.com"
+    },
+    "destination": "Lisbon",
+    "departure_date": "2026-07-10",
+    "return_date": "2026-07-20",
+    "status": "aprovado",
+    "created_at": "2026-06-06T19:00:00.000000Z",
+    "updated_at": "2026-06-06T19:15:00.000000Z"
+  }
+}
 ```
 
-### Notificacoes Nao Processam
+**HTTP STATUS 403** caso o usuario nao seja administrador ou tente alterar o proprio pedido.
 
-Confira o worker:
+**HTTP STATUS 409** caso o pedido ja esteja `aprovado` ou `cancelado`.
 
-```bash
-docker compose logs queue
-```
+**HTTP STATUS 422** caso o status enviado seja invalido.
 
-Rode um worker manual para debug:
+# Observacoes sobre notificacoes
 
-```bash
-docker compose exec app php artisan queue:work redis --tries=3 --timeout=60
-```
+Quando um pedido e aprovado ou cancelado, a aplicacao dispara a notificacao `TravelOrderStatusChanged` para o solicitante.
 
-### Portas Ocupadas
+Canais utilizados:
 
-Portas usadas pelo Compose:
+- `mail`
+- `database`
 
-- `8000`: API
-- `3306`: MySQL
-- `6379`: Redis
-- `8025`: Mailpit
+No Docker, a fila usa Redis e o worker roda no servico `queue`.
 
-Altere o mapeamento em `docker-compose.yml` se alguma ja estiver em uso.
+# Observacoes sobre cache
+
+A listagem de pedidos usa cache versionado por 60 segundos.
+
+O cache considera:
+
+- usuario autenticado ou visao de administrador
+- filtros aplicados
+- pagina atual
+- quantidade por pagina
+- versao de cache
+
+Ao criar, editar, aprovar ou cancelar um pedido, a versao do cache e incrementada para evitar retorno de dados antigos.
